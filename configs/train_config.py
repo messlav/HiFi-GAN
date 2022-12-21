@@ -18,10 +18,11 @@ class Config:
     n_mels: int = 80
     n_channels: int = 512
 
-    upsample_size = [8, 8, 2, 2]
-    kernel_u = [16, 16, 4, 4]
-    kernel_r = [3, 7, 11]
-    dilations_r = [[[1, 1], [3, 1], [5, 1]]] * 3
+    upsample_rates = [8, 8, 2, 2]
+    upsample_kernel_sizes = [16, 16, 4, 4]
+    resblock_kernel_sizes = [3, 7, 11]
+    resblock_dilation_sizes = [[[1, 1], [3, 1], [5, 1]]] * 3
+
     mpd_kernel_size: int = 5
     mpd_stride: int = 3
     mpd_periods = [2, 3, 5, 7, 11]

@@ -61,11 +61,11 @@ class Generator(nn.Module):
         self.mrfs = nn.ModuleList()
 
         chanels_now = config.n_channels
-        for i in range(len(config.kernel_u)):
+        for i in range(len(config.upsample_kernel_sizes)):
             out_channels = chanels_now // 2
-            self.ups += [nn.ConvTranspose1d(chanels_now, out_channels, kernel_size=config.kernel_u[i],
-                                            stride=config.upsample_size[i])]
-            self.mrfs += [MultiReceptiveField(out_channels, config.kernel_r, config.dilations_r)]
+            self.ups += [nn.ConvTranspose1d(chanels_now, out_channels, kernel_size=config.upsample_kernel_sizes[i],
+                                            stride=config.upsample_rates[i])]
+            self.mrfs += [MultiReceptiveField(out_channels, config.resblock_kernel_sizes, config.resblock_dilation_sizes)]
             chanels_now = out_channels
 
         self.last = nn.Conv1d(chanels_now, 1, kernel_size=7, stride=1, padding=3)
