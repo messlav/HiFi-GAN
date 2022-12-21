@@ -45,10 +45,11 @@ class GanLoss(nn.Module):
 
 
 class L1Loss(nn.Module):
-    def __init__(self, melspectrogram):
+    def __init__(self, melspectrogram, pad_value):
         super(L1Loss, self).__init__()
         self.melspectrogram = melspectrogram
         self.loss = nn.L1Loss()
+        self.pad_value = pad_value
 
     def forward(self, melspec, fake):
         melspec_fake = self.melspectrogram(fake)

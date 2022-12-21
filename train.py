@@ -34,7 +34,7 @@ def main():
         pin_memory=True,
         drop_last=True
     )
-    melspectrogram = MelSpectrogram(melspec_config)
+    melspectrogram = MelSpectrogram(melspec_config).to(train_config.device)
     # model
     G = Generator(train_config)
     G = G.to(train_config.device)
@@ -44,7 +44,7 @@ def main():
     # floss, gloss, dloss = FeatureLoss(), GeneratorLoss(), DicriminatorLoss()
     gan_loss = GanLoss()
     f_loss = FeatureLoss()
-    l1_loss = L1Loss(melspectrogram)
+    l1_loss = L1Loss(melspectrogram, melspec_config.pad_value)
     optim_G = AdamW(G.parameters(), train_config.learning_rate, betas=(train_config.adam_b1, train_config.adam_b2))
     optim_D = AdamW(itertools.chain(D.msd.parameters(), D.mpd.parameters()),
                     train_config.learning_rate, betas=(train_config.adam_b1, train_config.adam_b2))
@@ -63,9 +63,9 @@ def main():
     # tqdm_bar = tqdm(total=train_config.num_epochs * len(data_loader) - current_step)
     tqdm_bar = tqdm(total=1000)
     waveforms, waveforms_length = next(iter(data_loader))
-    melspec = melspectrogram(waveforms)
-    melspec = melspec.to(train_config.device)
     waveforms = waveforms.to(train_config.device)
+    melspec = melspectrogram(waveforms)
+    # melspec = melspec.to(train_config.device)
     for i in range(1000):
         current_step += 1
         tqdm_bar.update(1)
@@ -101,7 +101,7 @@ def main():
         set_require_grad(D, False)
         set_require_grad(G, True)
         optim_G.zero_grad()
-        waveform_l1 = l1_loss(waveform_prediction) * train_config.lambda_mel
+        waveform_l1 = l1_loss(melspec, waveform_prediction) * train_config.lambda_mel
 
         mpd_fake, mpd_fake_feature_map = D.mpd(waveform_prediction)
         msd_fake, msd_fake_feature_map = D.msd(waveform_prediction)
