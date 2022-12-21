@@ -2,7 +2,7 @@ import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ExponentialLR
 from torch.utils.data import DataLoader
-from torch.cuda.amp import GradScaler, autocast
+from torch.cuda.amp import GradScaler
 from torch.nn import functional as F
 import itertools
 from tqdm import tqdm
@@ -10,11 +10,11 @@ import os
 
 from utils.utils import set_random_seed, set_require_grad
 from datasets.ljspeech_dataset import LJSpeechDataset, collate_fn
+from datasets.test_dataset import TestDataset
 from melspec.melspec import MelSpectrogram, MelSpectrogramConfig
-from configs.train_batch_config import Config
+from configs.train_config import Config
 from model.generator import Generator
 from model.discriminator import Discriminator
-# from loss.gan_loss import FeatureLoss, DicriminatorLoss, GeneratorLoss
 from loss.gan_loss import GanLoss, FeatureLoss, L1Loss
 from utils.wandb_writer import WanDBWriter
 
@@ -35,14 +35,26 @@ def main():
         pin_memory=True,
         drop_last=True
     )
+    testset = TestDataset('val/wavs')
+    test_loader = DataLoader(
+        testset,
+        batch_size=3,
+        collate_fn=collate_fn,
+        shuffle=False,
+        num_workers=train_config.num_workers,
+        pin_memory=True,
+        drop_last=False
+    )
     melspectrogram = MelSpectrogram(melspec_config).to(train_config.device)
+    waveforms_test, waveforms_length_test = next(iter(test_loader))
+    waveforms_test = waveforms_test.to(train_config.device)
+    melspec_test = melspectrogram(waveforms_test)
     # model
     G = Generator(train_config)
     G = G.to(train_config.device)
     D = Discriminator(train_config)
     D = D.to(train_config.device)
     # loss, optimizer and hyperparameters
-    # floss, gloss, dloss = FeatureLoss(), GeneratorLoss(), DicriminatorLoss()
     gan_loss = GanLoss()
     f_loss = FeatureLoss()
     l1_loss = L1Loss(melspectrogram, melspec_config.pad_value)
@@ -61,88 +73,100 @@ def main():
     # train
     G.train()
     D.train()
-    # tqdm_bar = tqdm(total=train_config.num_epochs * len(data_loader) - current_step)
-    tqdm_bar = tqdm(total=100)
-    waveforms, waveforms_length = next(iter(data_loader))
-    waveforms = waveforms.to(train_config.device)
-    melspec = melspectrogram(waveforms)
-    # melspec = melspec.to(train_config.device)
-    for i in range(100):
-        current_step += 1
-        tqdm_bar.update(1)
-        logger.set_step(current_step)
+    tqdm_bar = tqdm(total=train_config.num_epochs * len(data_loader) - current_step)
+    for epoch in range(train_config.num_epochs):
+        for waveforms, waveforms_length in data_loader:
+            current_step += 1
+            tqdm_bar.update(1)
+            logger.set_step(current_step)
 
-        # Discriminator
-        # TODO: autocast
-        # with torch.no_grad():
-        waveform_prediction = G(melspec)
+            waveforms = waveforms.to(train_config.device)
+            melspec = melspectrogram(waveforms)
 
-        set_require_grad(D, True)
-        set_require_grad(G, False)
+            # Discriminator
+            with torch.cuda.amp.autocast():
+                waveform_prediction = G(melspec)
 
-        optim_D.zero_grad()
+                set_require_grad(D, True)
+                set_require_grad(G, False)
 
-        mpd_fake, mpd_fake_feature_map = D.mpd(waveform_prediction.detach())
-        msd_fake, msd_fake_feature_map = D.msd(waveform_prediction.detach())
+                mpd_fake, mpd_fake_feature_map = D.mpd(waveform_prediction.detach())
+                msd_fake, msd_fake_feature_map = D.msd(waveform_prediction.detach())
 
-        mpd_true, mpd_true_feature_map = D.mpd(waveforms.unsqueeze(1))
-        msd_true, msd_true_feature_map = D.msd(waveforms.unsqueeze(1))
+                mpd_true, mpd_true_feature_map = D.mpd(waveforms.unsqueeze(1))
+                msd_true, msd_true_feature_map = D.msd(waveforms.unsqueeze(1))
 
-        D_real_loss = gan_loss(msd_true, mpd_true, fake=False)
-        D_fake_loss = gan_loss(msd_fake, mpd_fake, fake=True)
-        D_loss = D_real_loss + D_fake_loss
+                D_real_loss = gan_loss(msd_true, mpd_true, fake=False)
+                D_fake_loss = gan_loss(msd_fake, mpd_fake, fake=True)
+                D_loss = D_real_loss + D_fake_loss
 
-        D_loss.backward()
-        optim_D.step()
+            optim_D.zero_grad()
+            scaler_D.scale(D_loss).backward()
+            scaler_D.step(optim_D)
+            scaler_D.update()
 
-        logger.add_scalar("discriminator_fake_loss", D_fake_loss.detach().cpu().numpy())
-        logger.add_scalar("discriminator_real_loss", D_real_loss.detach().cpu().numpy())
-        logger.add_scalar("discriminator_loss", D_loss.detach().cpu().numpy())
+            logger.add_scalar("discriminator_fake_loss", D_fake_loss.detach().cpu().numpy())
+            logger.add_scalar("discriminator_real_loss", D_real_loss.detach().cpu().numpy())
+            logger.add_scalar("discriminator_loss", D_loss.detach().cpu().numpy())
 
-        # Generator
-        set_require_grad(D, False)
-        set_require_grad(G, True)
-        optim_G.zero_grad()
-        waveform_l1 = l1_loss(melspec.unsqueeze(1), waveform_prediction) * train_config.lambda_mel
+            # Generator
+            set_require_grad(D, False)
+            set_require_grad(G, True)
+            with torch.cuda.amp.autocast():
+                waveform_l1 = l1_loss(melspec.unsqueeze(1), waveform_prediction) * train_config.lambda_mel
 
-        mpd_fake, mpd_fake_feature_map = D.mpd(waveform_prediction)
-        msd_fake, msd_fake_feature_map = D.msd(waveform_prediction)
+                mpd_fake, mpd_fake_feature_map = D.mpd(waveform_prediction)
+                msd_fake, msd_fake_feature_map = D.msd(waveform_prediction)
 
-        diff_len = waveform_prediction.shape[-1] - waveforms.shape[-1]
-        waveform = F.pad(waveforms, (0, diff_len))
+                diff_len = waveform_prediction.shape[-1] - waveforms.shape[-1]
+                waveform = F.pad(waveforms, (0, diff_len))
 
-        mpd_true, mpd_true_feature_map = D.mpd(waveform.unsqueeze(1))
-        msd_true, msd_true_feature_map = D.msd(waveform.unsqueeze(1))
+                mpd_true, mpd_true_feature_map = D.mpd(waveform.unsqueeze(1))
+                msd_true, msd_true_feature_map = D.msd(waveform.unsqueeze(1))
 
-        fm_loss = (f_loss(mpd_fake_feature_map, mpd_true_feature_map) +
-                   f_loss(msd_fake_feature_map, msd_true_feature_map)) * train_config.lambda_fm
+                fm_loss = (f_loss(mpd_fake_feature_map, mpd_true_feature_map) +
+                           f_loss(msd_fake_feature_map, msd_true_feature_map)) * train_config.lambda_fm
 
-        gan_loss_now = gan_loss(msd_fake, mpd_fake, fake=False)
+                gan_loss_now = gan_loss(msd_fake, mpd_fake, fake=False)
 
-        G_loss = gan_loss_now + waveform_l1 + fm_loss
-        G_loss.backward()
-        optim_G.step()
+                G_loss = gan_loss_now + waveform_l1 + fm_loss
 
-        logger.add_scalar("gan_loss", gan_loss_now.detach().cpu().numpy())
-        logger.add_scalar("l1_loss", waveform_l1.detach().cpu().numpy())
-        logger.add_scalar("G_fm_loss", fm_loss.detach().cpu().numpy())
-        logger.add_scalar("generator_loss", G_loss.detach().cpu().numpy())
+            optim_G.zero_grad()
+            scaler_G.scale(G_loss).backward()
+            scaler_G.step(optim_G)
+            scaler_G.update()
 
-        scheduler_G.step()
-        scheduler_D.step()
+            logger.add_scalar("gan_loss", gan_loss_now.detach().cpu().numpy())
+            logger.add_scalar("l1_loss", waveform_l1.detach().cpu().numpy())
+            logger.add_scalar("G_fm_loss", fm_loss.detach().cpu().numpy())
+            logger.add_scalar("generator_loss", G_loss.detach().cpu().numpy())
+            logger.add_scalar("G_learning_rate", scheduler_G.get_last_lr()[0])
+            logger.add_scalar("D_learning_rate", scheduler_D.get_last_lr()[0])
 
-    # TODO: save lr
-    # TODO: Save G
-    torch.save({'Generator': G.state_dict(), 'optimizer': optim_G.state_dict()},
-               os.path.join(train_config.save_path, 'checkpoint_check.pth.tar'))
+            scheduler_G.step()
+            scheduler_D.step()
 
-    G.eval()
-    with torch.no_grad():
-        fake = G(melspec)
+        if epoch != 0 and epoch % train_config.save_epochs == 0:
+            torch.save({'Generator': G.state_dict(), 'optimizer': optim_G.state_dict()},
+                       os.path.join(train_config.save_path, 'checkpoint_%d.pth.tar' % epoch))
 
-    for i in range(3):
-        logger.add_audio("true_audio", waveforms[i], sample_rate=22050)
-        logger.add_audio("pred_audio", fake[i], sample_rate=22050)
+        if epoch % train_config.validate_epochs == 0 or epoch == train_config.num_epochs - 1:
+            G.eval()
+            with torch.no_grad():
+                fake = G(melspec_test)
+
+            for i in range(3):
+                logger.add_audio("test/true_audio", waveforms[i], sample_rate=22050)
+                logger.add_audio("test/pred_audio", fake[i], sample_rate=22050)
+
+            with torch.no_grad():
+                fake = G(melspec)
+
+            for i in range(3):
+                logger.add_audio("true_audio", waveforms[i], sample_rate=22050)
+                logger.add_audio("pred_audio", fake[i], sample_rate=22050)
+
+            G.train()
 
 
 if __name__ == '__main__':
