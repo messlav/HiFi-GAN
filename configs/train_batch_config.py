@@ -4,38 +4,32 @@ import torch
 
 @dataclass
 class Config:
-    batch_size: int = 16
+    wandb_project: str = 'Hi-Fi-GAN'
     device: str = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+
+    num_epochs = 100
+    save_epochs = 10
+    validate_epochs = 1
+    save_path = 'weights'
+
+    batch_size: int = 16
     num_workers: int = 4
 
     n_mels: int = 80
     n_channels: int = 512
 
-    leaky: float = 0.1
-
     upsample_size = [8, 8, 2, 2]
     kernel_u = [16, 16, 4, 4]
     kernel_r = [3, 7, 11]
     dilations_r = [[[1, 1], [3, 1], [5, 1]]] * 3
-
     mpd_kernel_size: int = 5
     mpd_stride: int = 3
     mpd_periods = [2, 3, 5, 7, 11]
-
     mcd_num_layers = 3
-
-    test_size: float = 0.1
-
     lambda_fm: float = 2.
     lambda_mel: float = 45
 
-    wandb_project = 'Hi-Fi-GAN'
-
-    log_train_step: int = 500
-    log_val_step: int = 100
-
-    n_epochs: int = 10
-
+    optim = 'AdamW'
     learning_rate: int = 0.0002
     adam_b1: float = 0.8
     adam_b2: float = 0.99

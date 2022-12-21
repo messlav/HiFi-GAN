@@ -7,7 +7,7 @@ from torch.nn import functional as F
 import itertools
 from tqdm import tqdm
 
-from utils.utils import set_random_seed
+from utils.utils import set_random_seed, set_require_grad
 from datasets.ljspeech_dataset import LJSpeechDataset, collate_fn
 from melspec.melspec import MelSpectrogram, MelSpectrogramConfig
 from configs.train_batch_config import Config
@@ -16,11 +16,6 @@ from model.discriminator import Discriminator
 # from loss.gan_loss import FeatureLoss, DicriminatorLoss, GeneratorLoss
 from loss.gan_loss import GanLoss, FeatureLoss, L1Loss
 from utils.wandb_writer import WanDBWriter
-
-
-def set_require_grad(model, value: bool):
-    for param in model.parameters():
-        param.requires_grad = value
 
 
 def main():

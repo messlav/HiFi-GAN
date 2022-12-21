@@ -1,5 +1,5 @@
 import torch.nn as nn
-import torch
+# import torch
 from torch.nn import functional as F
 
 
@@ -50,26 +50,25 @@ class L1Loss(nn.Module):
         self.melspectrogram = melspectrogram
         self.loss = nn.L1Loss()
 
-    def forward(self, melspec, waveform_prediction):
-        melspec_prediction = self.melspectrogram(waveform_prediction)
+    def forward(self, melspec, fake):
+        melspec_fake = self.melspectrogram(fake)
 
-        diff_len = melspec_prediction.shape[-1] - melspec.shape[-1]
-
-        if diff_len < 0:
-            melspec_prediction = F.pad(melspec_prediction, (0, -diff_len), value=self.pad_value)
+        ln = melspec_fake.shape[-1] - melspec.shape[-1]
+        if ln < 0:
+            melspec_fake = F.pad(melspec_fake, (0, -ln), value=self.pad_value)
         else:
-            melspec = F.pad(melspec, (0, diff_len), value=self.pad_value)
+            melspec = F.pad(melspec, (0, ln), value=self.pad_value)
 
-        waveform_l1 = self.loss(
-            melspec,
-            melspec_prediction
-        )
-
-        return waveform_l1
+        return self.loss(melspec, melspec_fake)
 
 
 class FeatureLoss(nn.Module):
-    def forward(self, fake_fms_arr, true_fms_arr):
-        return sum(
-            sum([self.fm_loss(fake_fm, true_fm) for fake_fm, true_fm in zip(fake_fms, true_fms)]) for fake_fms, true_fms
-            in zip(fake_fms_arr, true_fms_arr))
+    def __init__(self):
+        super(FeatureLoss, self).__init__()
+        self.loss = nn.L1Loss()
+
+    def forward(self, fake, real):
+        loss = 0
+        for fake_maps, real_maps in zip(fake, real):
+            for fake_map, real_map in zip(fake_maps, real_maps):
+                loss += self.loss(fake_map, real_map)
