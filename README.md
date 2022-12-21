@@ -40,3 +40,9 @@ import gdown
 
 gdown.download('https://drive.google.com/u/0/uc?id=1-EdH0t0loc6vPiuVtXdhsDtzygWNSNZx')
 ```
+
+5. Inference model (with wandb logging btw)
+
+```python
+python3 inference.py --G_path {path to file} 
+```
