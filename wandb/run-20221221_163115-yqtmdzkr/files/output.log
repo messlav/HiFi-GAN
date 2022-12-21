@@ -1,0 +1,21 @@
+
+
+  0%|          | 1/1000 [00:50<13:56:00, 50.21s/it]Traceback (most recent call last):
+  File "/Users/slavapirogov/HiFi-GAN/train.py", line 150, in <module>
+    main()
+  File "/Users/slavapirogov/HiFi-GAN/train.py", line 89, in main
+    mcd_fake, mcd_fake_feature_map = D.msd(waveform_prediction.detach())
+  File "/Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/Users/slavapirogov/HiFi-GAN/model/discriminator.py", line 106, in forward
+    pred, fmap = layer(x)
+  File "/Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/Users/slavapirogov/HiFi-GAN/model/discriminator.py", line 79, in forward
+    x = conv(x)
+  File "/Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1212, in _call_impl
+    result = forward_call(*input, **kwargs)
+  File "/Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/torch/nn/modules/conv.py", line 313, in forward
+    return self._conv_forward(input, self.weight, self.bias)
+  File "/Library/Frameworks/Python.framework/Versions/3.9/lib/python3.9/site-packages/torch/nn/modules/conv.py", line 309, in _conv_forward
+    return F.conv1d(input, weight, bias, self.stride,

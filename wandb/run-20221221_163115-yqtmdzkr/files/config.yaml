@@ -1,0 +1,86 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.13.7
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.9.7
+    start_time: 1671633075.920259
+    t:
+      1:
+      - 1
+      - 5
+      - 51
+      - 53
+      - 55
+      2:
+      - 1
+      - 5
+      - 51
+      - 53
+      - 55
+      3:
+      - 1
+      - 16
+      - 23
+      4: 3.9.7
+      5: 0.13.7
+      8:
+      - 5
+adam_b1:
+  desc: null
+  value: 0.8
+adam_b2:
+  desc: null
+  value: 0.99
+batch_size:
+  desc: null
+  value: 16
+device:
+  desc: null
+  value: cpu
+lambda_fm:
+  desc: null
+  value: 2.0
+lambda_mel:
+  desc: null
+  value: 45
+leaky:
+  desc: null
+  value: 0.1
+learning_rate:
+  desc: null
+  value: 0.0002
+log_train_step:
+  desc: null
+  value: 500
+log_val_step:
+  desc: null
+  value: 100
+lr_decay:
+  desc: null
+  value: 0.999
+mpd_kernel_size:
+  desc: null
+  value: 5
+mpd_stride:
+  desc: null
+  value: 3
+n_channels:
+  desc: null
+  value: 512
+n_epochs:
+  desc: null
+  value: 10
+n_mels:
+  desc: null
+  value: 80
+num_workers:
+  desc: null
+  value: 4
+test_size:
+  desc: null
+  value: 0.1

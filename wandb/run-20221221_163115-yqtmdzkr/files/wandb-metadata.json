@@ -1,0 +1,42 @@
+{
+    "os": "macOS-10.16-x86_64-i386-64bit",
+    "python": "3.9.7",
+    "heartbeatAt": "2022-12-21T14:31:17.418513",
+    "startedAt": "2022-12-21T14:31:15.895694",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/Users/slavapirogov/HiFi-GAN/train.py",
+    "codePath": "train.py",
+    "git": {
+        "remote": "https://github.com/messlav/HiFi-GAN.git",
+        "commit": null
+    },
+    "email": "slav.pirogow@yandex.ru",
+    "root": "/Users/slavapirogov/HiFi-GAN",
+    "host": "MacBook-Air-Slava.local",
+    "username": "slavapirogov",
+    "executable": "/usr/local/bin/python3.9",
+    "cpu_count": 2,
+    "cpu_count_logical": 4,
+    "cpu_freq": {
+        "current": 1100,
+        "min": 1100,
+        "max": 1100
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 1100,
+            "min": 1100,
+            "max": 1100
+        }
+    ],
+    "disk": {
+        "total": 233.46913528442383,
+        "used": 8.220649719238281
+    },
+    "memory": {
+        "total": 8.0
+    }
+}
