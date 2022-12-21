@@ -64,8 +64,8 @@ def main():
     tqdm_bar = tqdm(total=1000)
     waveforms, waveforms_length = next(iter(data_loader))
     melspec = melspectrogram(waveforms)
-    melspec.to(train_config.device)
-    waveforms.to(train_config.device)
+    melspec = melspec.to(train_config.device)
+    waveforms = waveforms.to(train_config.device)
     for i in range(1000):
         current_step += 1
         tqdm_bar.update(1)
@@ -81,13 +81,13 @@ def main():
         optim_D.zero_grad()
 
         mpd_fake, mpd_fake_feature_map = D.mpd(waveform_prediction.detach())
-        mcd_fake, mcd_fake_feature_map = D.msd(waveform_prediction.detach())
+        msd_fake, msd_fake_feature_map = D.msd(waveform_prediction.detach())
 
-        mpd_true, mpd_true_feature_map = D.mpd(waveforms)
-        mcd_true, mcd_true_feature_map = D.mcd(waveforms)
+        mpd_true, mpd_true_feature_map = D.mpd(waveforms.unsqueeze(1))
+        msd_true, msd_true_feature_map = D.msd(waveforms.unsqueeze(1))
 
-        D_real_loss = gan_loss(mcd_true, mpd_true, fake=False)
-        D_fake_loss = gan_loss(mcd_fake, mpd_fake, fake=True)
+        D_real_loss = gan_loss(msd_true, mpd_true, fake=False)
+        D_fake_loss = gan_loss(msd_fake, mpd_fake, fake=True)
         D_loss = D_real_loss + D_fake_loss
 
         D_loss.backward()
@@ -104,18 +104,18 @@ def main():
         waveform_l1 = l1_loss(waveform_prediction) * train_config.lambda_mel
 
         mpd_fake, mpd_fake_feature_map = D.mpd(waveform_prediction)
-        mcd_fake, mcd_fake_feature_map = D.msd(waveform_prediction)
+        msd_fake, msd_fake_feature_map = D.msd(waveform_prediction)
 
         diff_len = waveform_prediction.shape[-1] - waveforms.shape[-1]
         waveform = F.pad(waveforms, (0, diff_len))
 
         mpd_true, mpd_true_feature_map = D.mpd(waveform)
-        mcd_true, mcd_true_feature_map = D.msd(waveform)
+        msd_true, msd_true_feature_map = D.msd(waveform)
 
         fm_loss = (f_loss(mpd_fake_feature_map, mpd_true_feature_map) +
-                   f_loss(mcd_fake_feature_map, mcd_true_feature_map)) * train_config.lambda_fm
+                   f_loss(msd_fake_feature_map, msd_true_feature_map)) * train_config.lambda_fm
 
-        gan_loss = gan_loss(mcd_fake, mpd_fake, fake=False)
+        gan_loss = gan_loss(msd_fake, mpd_fake, fake=False)
 
         G_loss = gan_loss + waveform_l1 + fm_loss
         G_loss.backward()
