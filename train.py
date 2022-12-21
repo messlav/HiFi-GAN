@@ -156,7 +156,7 @@ def main():
                 fake = G(melspec_test)
 
             for i in range(3):
-                logger.add_audio(f"test/true_audio{i}", waveforms[i], sample_rate=22050)
+                logger.add_audio(f"test/true_audio{i}", waveforms_test[i], sample_rate=22050)
                 logger.add_audio(f"test/pred_audio{i}", fake[i], sample_rate=22050)
 
             with torch.no_grad():
