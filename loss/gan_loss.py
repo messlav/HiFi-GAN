@@ -73,3 +73,5 @@ class FeatureLoss(nn.Module):
         for fake_maps, real_maps in zip(fake, real):
             for fake_map, real_map in zip(fake_maps, real_maps):
                 loss += self.loss(fake_map, real_map)
+
+        return loss

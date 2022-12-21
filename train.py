@@ -6,6 +6,7 @@ from torch.cuda.amp import GradScaler, autocast
 from torch.nn import functional as F
 import itertools
 from tqdm import tqdm
+import os
 
 from utils.utils import set_random_seed, set_require_grad
 from datasets.ljspeech_dataset import LJSpeechDataset, collate_fn
@@ -52,7 +53,7 @@ def main():
     scheduler_D = ExponentialLR(optim_D, gamma=train_config.lr_decay)
     scaler_G = GradScaler()
     scaler_D = GradScaler()
-    # os.makedirs(checkpoint_config.save_path, exist_ok=True)
+    os.makedirs(train_config.save_path, exist_ok=True)
     logger = WanDBWriter(train_config)
     logger.watch_model(D)
     logger.watch_model(G)  # not sure if that's working
@@ -61,12 +62,12 @@ def main():
     G.train()
     D.train()
     # tqdm_bar = tqdm(total=train_config.num_epochs * len(data_loader) - current_step)
-    tqdm_bar = tqdm(total=1000)
+    tqdm_bar = tqdm(total=100)
     waveforms, waveforms_length = next(iter(data_loader))
     waveforms = waveforms.to(train_config.device)
     melspec = melspectrogram(waveforms)
     # melspec = melspec.to(train_config.device)
-    for i in range(1000):
+    for i in range(100):
         current_step += 1
         tqdm_bar.update(1)
         logger.set_step(current_step)
@@ -74,10 +75,11 @@ def main():
         # Discriminator
         # TODO: autocast
         # with torch.no_grad():
+        waveform_prediction = G(melspec)
+
         set_require_grad(D, True)
         set_require_grad(G, False)
 
-        waveform_prediction = G(melspec)
         optim_D.zero_grad()
 
         mpd_fake, mpd_fake_feature_map = D.mpd(waveform_prediction.detach())
@@ -101,7 +103,7 @@ def main():
         set_require_grad(D, False)
         set_require_grad(G, True)
         optim_G.zero_grad()
-        waveform_l1 = l1_loss(melspec, waveform_prediction) * train_config.lambda_mel
+        waveform_l1 = l1_loss(melspec.unsqueeze(1), waveform_prediction) * train_config.lambda_mel
 
         mpd_fake, mpd_fake_feature_map = D.mpd(waveform_prediction)
         msd_fake, msd_fake_feature_map = D.msd(waveform_prediction)
@@ -109,19 +111,19 @@ def main():
         diff_len = waveform_prediction.shape[-1] - waveforms.shape[-1]
         waveform = F.pad(waveforms, (0, diff_len))
 
-        mpd_true, mpd_true_feature_map = D.mpd(waveform)
-        msd_true, msd_true_feature_map = D.msd(waveform)
+        mpd_true, mpd_true_feature_map = D.mpd(waveform.unsqueeze(1))
+        msd_true, msd_true_feature_map = D.msd(waveform.unsqueeze(1))
 
         fm_loss = (f_loss(mpd_fake_feature_map, mpd_true_feature_map) +
                    f_loss(msd_fake_feature_map, msd_true_feature_map)) * train_config.lambda_fm
 
-        gan_loss = gan_loss(msd_fake, mpd_fake, fake=False)
+        gan_loss_now = gan_loss(msd_fake, mpd_fake, fake=False)
 
-        G_loss = gan_loss + waveform_l1 + fm_loss
+        G_loss = gan_loss_now + waveform_l1 + fm_loss
         G_loss.backward()
         optim_G.step()
 
-        logger.add_scalar("gan_loss", gan_loss.detach().cpu().numpy())
+        logger.add_scalar("gan_loss", gan_loss_now.detach().cpu().numpy())
         logger.add_scalar("l1_loss", waveform_l1.detach().cpu().numpy())
         logger.add_scalar("G_fm_loss", fm_loss.detach().cpu().numpy())
         logger.add_scalar("generator_loss", G_loss.detach().cpu().numpy())
@@ -131,6 +133,8 @@ def main():
 
     # TODO: save lr
     # TODO: Save G
+    torch.save({'Generator': G.state_dict(), 'optimizer': optim_G.state_dict()},
+               os.path.join(train_config.save_path, 'checkpoint_check.pth.tar'))
 
     G.eval()
     with torch.no_grad():
