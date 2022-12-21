@@ -1,34 +1,5 @@
 import torch.nn as nn
-# import torch
 from torch.nn import functional as F
-
-
-# class FeatureLoss(nn.Module):
-#     def forward(self, fmaps_real, fmaps_gen):
-#         loss = 0
-#         for fmap_real, fmap_gen in zip(fmaps_real, fmaps_gen):
-#             for real, gen in zip(fmap_real, fmap_gen):
-#                 loss += torch.mean(torch.abs(real - gen))
-#
-#         return 2 * loss
-#
-#
-# class DicriminatorLoss(nn.Module):
-#     def forward(self, real, fake):
-#         loss = 0
-#         for r, f in zip(real, fake):
-#             loss += torch.mean((1 - r)**2) + torch.mean(f**2)
-#
-#         return loss
-#
-#
-# class GeneratorLoss(nn.Module):
-#     def forward(self, disc):
-#         loss = 0
-#         for d in disc:
-#             loss += torch.mean((1 - d)**2)
-#
-#         return loss
 
 
 class GanLoss(nn.Module):

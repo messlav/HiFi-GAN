@@ -8,7 +8,7 @@ class Config:
     device: str = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
     num_epochs = 100
-    save_epochs = 10
+    save_epochs = 1
     validate_epochs = 1
     save_path = 'weights'
 

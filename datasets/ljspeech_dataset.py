@@ -7,7 +7,7 @@ from melspec.melspec import MelSpectrogram, MelSpectrogramConfig
 
 
 class LJSpeechDataset(LJSPEECH):
-    def __init__(self, root, max_len: int = 8192 * 2):
+    def __init__(self, root, max_len: int = 16384):
         super().__init__(root=root)
         self.max_len = max_len
 
@@ -23,16 +23,11 @@ class LJSpeechDataset(LJSPEECH):
 
 
 def collate_fn(batch):
-    waveform, waveform_length = list(
-        zip(*batch)
-    )
+    waveforms, waveforms_length = list(zip(*batch))
+    waveforms = pad_sequence([waveform[0] for waveform in waveforms]).transpose(0, 1)
+    waveforms_length = torch.cat(waveforms_length)
 
-    waveform = pad_sequence([
-        waveform_[0] for waveform_ in waveform
-    ]).transpose(0, 1)
-    waveform_length = torch.cat(waveform_length)
-
-    return waveform, waveform_length
+    return waveforms, waveforms_length
 
 
 def test():
