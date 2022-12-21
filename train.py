@@ -113,7 +113,7 @@ def main():
             set_require_grad(D, False)
             set_require_grad(G, True)
             with torch.cuda.amp.autocast():
-                l1_loss_now = l1_loss(melspec.unsqueeze(1), waveform_prediction) * train_config.lambda_mel
+                l1_loss_now = l1_loss(melspec, waveform_prediction.squeeze(1)) * train_config.lambda_mel
 
                 mpd_fake, mpd_fake_fmap = D.mpd(waveform_prediction)
                 msd_fake, msd_fake_fmap = D.msd(waveform_prediction)
