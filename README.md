@@ -38,7 +38,7 @@ python3 train.py
 ```python
 import gdown
 
-gdown.download('https://drive.google.com/u/0/uc?id=1-EdH0t0loc6vPiuVtXdhsDtzygWNSNZx')
+gdown.download('https://drive.google.com/u/0/uc?id=1GbQZMBnHbsCTHAqXOpD0GSYzuWZK0H_J')
 ```
 
 5. Inference model (with wandb logging btw)
