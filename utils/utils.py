@@ -13,8 +13,3 @@ def set_random_seed(seed):
 
 def get_padding(kernel_size, dilation=1):
     return int((kernel_size*dilation - dilation)/2)
-
-
-def set_require_grad(model, flag: bool):
-    for param in model.parameters():
-        param.requires_grad = flag

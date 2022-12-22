@@ -8,7 +8,7 @@ import itertools
 from tqdm import tqdm
 import os
 
-from utils.utils import set_random_seed, set_require_grad
+from utils.utils import set_random_seed
 from datasets.ljspeech_dataset import LJSpeechDataset, collate_fn
 from datasets.test_dataset import TestDataset
 from melspec.melspec import MelSpectrogram, MelSpectrogramConfig
@@ -87,9 +87,6 @@ def main():
             with torch.cuda.amp.autocast():
                 waveform_prediction = G(melspec)
 
-                set_require_grad(D, True)
-                set_require_grad(G, False)
-
                 mpd_fake, mpd_fake_fmap = D.mpd(waveform_prediction.detach())
                 msd_fake, msd_fake_fmap = D.msd(waveform_prediction.detach())
 
@@ -110,8 +107,9 @@ def main():
             logger.add_scalar("discriminator_loss", D_loss.detach().cpu().numpy())
 
             # Generator
-            set_require_grad(D, False)
-            set_require_grad(G, True)
+            for p in D.parameters():
+                # reduce memory usage
+                p.requires_grad_(False)
             with torch.cuda.amp.autocast():
                 l1_loss_now = l1_loss(melspec, waveform_prediction.squeeze(1)) * train_config.lambda_mel
 
